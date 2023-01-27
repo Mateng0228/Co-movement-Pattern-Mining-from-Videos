@@ -1,6 +1,7 @@
 #ifndef PROJECT_CMC_TREE_H
 #define PROJECT_CMC_TREE_H
 #include <iostream>
+#include <climits>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>

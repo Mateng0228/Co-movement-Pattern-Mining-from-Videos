@@ -1,8 +1,9 @@
 #ifndef PROJECT_UTILS_H
 #define PROJECT_UTILS_H
-#include <io.h>
+#include <sys/types.h>
+#include <dirent.h>
 #include <fstream>
-#include <string>
+#include <cstring>
 #include <vector>
 #include <map>
 #include <set>
@@ -14,19 +15,15 @@ using namespace std;
 // 获得某文件夹下所有的子文件（不递归获得子文件夹内的文件）
 void get_subfiles(string path, vector<string>& filePaths) {
     vector<string> file_names;
-    long long hFile = 0;
-    struct _finddata_t fileinfo;
-    string p;
-
-    if ((hFile = _findfirst(p.assign(path).append("/*").c_str(), &fileinfo)) != -1) {
-        do {
-            if (strcmp(fileinfo.name, ".") != 0 && strcmp(fileinfo.name, "..") != 0){
-                file_names.emplace_back(fileinfo.name);
-            }
-        } while (_findnext(hFile, &fileinfo) == 0);
-
-        _findclose(hFile);
+    DIR *pDir;
+    struct dirent* ptr;
+    if(!(pDir = opendir(path.c_str()))) return;
+    while((ptr = readdir(pDir)) != nullptr) {
+        if(strcmp(ptr->d_name, ".") != 0 && strcmp(ptr->d_name, "..") != 0)
+            file_names.emplace_back(ptr->d_name);
     }
+    closedir(pDir);
+
     map<int, int> value2idx;
     for(int idx = 0;idx < file_names.size();idx++){
         string &file_name = file_names[idx];
