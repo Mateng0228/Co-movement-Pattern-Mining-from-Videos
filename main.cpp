@@ -13,6 +13,8 @@ int main(int argc, char *argv[]) {
     long long m = stoll(argv[2]);
     long long k = stoll(argv[3]);
     double eps = stod(argv[4]);
+    cout<<"parameters: "<<dataset<<" "<<m<<" "<<k<<" "<<eps<<" - ";
+
     // query
 //    CMC_Query cmc_query(dataset, m, k, eps);
 //    cmc_query.query();

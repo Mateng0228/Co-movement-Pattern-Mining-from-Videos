@@ -59,7 +59,7 @@ void ST_Query::query() {
         // 去重
         result.de_duplication();
         // 输出结果
-        result.print_contents();
+//        result.print_contents();
 //        result.dump_contents(mining_tree, "results/base.csv");
     }
     delete[] arr_positions;

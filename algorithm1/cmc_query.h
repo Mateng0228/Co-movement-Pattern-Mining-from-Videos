@@ -42,7 +42,7 @@ public:
         // 结果集去重
         result.de_duplication();
         // 输出convoys结果
-        result.print_contents();
+//        result.print_contents();
         delete[] arr_cameras, arr_intervals;
 
         cout<<"total elapsed time: "<<static_cast<double>(clock() - begin_time) / CLOCKS_PER_SEC<<"s"<<endl;
