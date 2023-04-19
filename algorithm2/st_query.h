@@ -32,6 +32,7 @@ public:
 
     void query();
 };
+//ll tot_car = 0, tot_seq = 0, tot_validate = 0;
 void ST_Query::query() {
     clock_t begin_time = clock();
 
@@ -44,6 +45,12 @@ void ST_Query::query() {
 
     // 为各车辆的摄像头添加聚类和分组信息
     add_cluster_mark(arr_positions, arr_size, m, eps);
+//    for(int i = 0;i < arr_size;i++){
+//        vector<position> &positions = arr_positions[i];
+//        for(position &pst : positions){
+//            pst.group = 1;
+//        }
+//    }
     // 去掉不属于任何聚类的position
     vector<vector<position>> positions_list;
     vector<int> sub2complete;
@@ -64,7 +71,7 @@ void ST_Query::query() {
     }
     delete[] arr_positions;
 
-    cout<<"total elapsed time: "<<static_cast<double>(clock() - begin_time) / CLOCKS_PER_SEC<<"s"<<endl;
+    cout<<"Total elapsed time: "<<static_cast<double>(clock() - begin_time) / CLOCKS_PER_SEC<<"s"<<endl;
 }
 
 void ST_Query::query(MiningTree &mining_tree, ll node_id, vector<int> &sub2complete, Result &result) {
@@ -88,6 +95,7 @@ void ST_Query::query(MiningTree &mining_tree, ll node_id, vector<int> &sub2compl
         int n_cars = count_unique(cars);
         if(n_cars < m) return;
 
+//        tot_car += cars.size(); tot_seq += common_length, tot_validate += 1;
         ST_Miner2 miner(common_length, begin_ids, cars, mining_tree);
         miner.mine(result, m, k, eps);
     }

@@ -2,6 +2,7 @@
 #define PROJECT_ST_MINING2_H
 
 #include <algorithm>
+#include <deque>
 #include "tree.h"
 #include "../result.h"
 
@@ -15,17 +16,18 @@ private:
     MiningTree& mining_tree;
 
     void get_clusters(int camera_idx, ll m, double eps, vector<pair<int, int>> &car_ids, vector<pair<int, int>> &cluster_marks);
-    void add_result(Result &result, vector<int> &cluster, int end_time, ll m);
+    void add_result(Result &result, vector<int> &cluster, int begin_time, int end_time, ll m);
     void collect_items(map<int, vector<int>>&, map<int, vector<int>>::iterator, vector<int>&, vector<vector<int>>&);
     struct Group{
-        int max_size, offset = 0, top_cluster = -1;
-        vector<int> items;
-        list<pair<int, int>> delimiter;// (cluster_id, position in cars)
-        bool extend_flag = false, contain_flag = false;
+        int max_size = 0;
+        deque<int> items;
+        bool extend_flag = false;
+        bool contain_flag = false;
+        bool in_check = false;
     };
 public:
     ST_Miner2(ll length, vector<ll>& begin_ids, vector<int>& cars, MiningTree& tree):
-        camera_length(length), begin_ids(begin_ids), cars(cars), mining_tree(tree){
+            camera_length(length), begin_ids(begin_ids), cars(cars), mining_tree(tree){
         car_length = cars.size();
     }
 
@@ -33,80 +35,91 @@ public:
 };
 
 void ST_Miner2::mine(Result &result, ll m, ll k, double eps) {
-    vector<vector<int>> pre_clusters;// 上次处理得到的聚类
-    vector<pair<int, vector<int>>> pre_marks;// pre_clusters的倒排表(以car为键)
+    // 待延长的候选convoys
+    vector<vector<int>> pre_convoys;
+    vector<int> begin_times;
+    // pre_convoys的倒排表
+    vector<pair<int, vector<int>>> inversion_lst;
 
-    pre_clusters.emplace_back();
-    vector<int> &cluster = pre_clusters.front();
+    // 初始化dummy convoy
+    pre_convoys.emplace_back();
+    begin_times.push_back(0);
+    vector<int> &dummy_convoy = pre_convoys.front();
     for(int car_id = 0;car_id < car_length;car_id++){
-        cluster.push_back(car_id);
-        pre_marks.emplace_back(car_id, vector<int>{0});
+        dummy_convoy.push_back(car_id);
+        inversion_lst.emplace_back(car_id, vector<int>{0});
     }
-    for(int camera_idx = 0;camera_idx < camera_length;camera_idx++){
-        vector<pair<int, int>> car_pos_list, curr_marks;
-        for(int mark_id = 0;mark_id < pre_marks.size();mark_id++) car_pos_list.emplace_back(pre_marks[mark_id].first, mark_id);
-        if(car_pos_list.empty()) break;
+    // 开始逐个摄像头的延长流程
+    for(int camera_idx = 0; camera_idx < camera_length; camera_idx++){
+        vector<pair<int, int>> car2position; // 记录car_id在倒排表中的位置
+        for(int inversion_id = 0; inversion_id < inversion_lst.size(); inversion_id++)
+            car2position.emplace_back(inversion_lst[inversion_id].first, inversion_id);
+        if(car2position.empty()) break;
 
-        get_clusters(camera_idx, m, eps, car_pos_list, curr_marks);
+        vector<pair<int, int>> belong_clusters;
+        get_clusters(camera_idx, m, eps, car2position, belong_clusters);
 
-        map<int, Group> cluster2group;
-        for(int cluster_id = 0;cluster_id < pre_clusters.size();cluster_id++){
-            Group group;
-            group.max_size = pre_clusters[cluster_id].size();
-            cluster2group[cluster_id] = group;
+        deque<int> window; // 滑动窗口
+        vector<Group> groups;
+        for(vector<int> &pre_convoy : pre_convoys){
+            groups.emplace_back();
+            Group &group = groups.back();
+            group.max_size = pre_convoy.size();
         }
+        set<int> check_lst; // 用于标识那些交集中元素个数大于等于m的待延长convoys
 
         // 连接聚类
-        set<vector<int>> candidates;
+        set<pair<vector<int>, int>> candidates; // pair(car_ids, begin_time)
         int handle_cluster = -1;
-        for(int handle_id = 0;handle_id < curr_marks.size();handle_id++){
-            int first_cluster = curr_marks[handle_id].first;
+        for(int handle_id = 0; handle_id < belong_clusters.size(); handle_id++){
+            int first_cluster = belong_clusters[handle_id].first;
             if(first_cluster == -1) continue;
 
             if(handle_cluster == -1) handle_cluster = first_cluster;
             if(handle_cluster == first_cluster){
-                int end_cluster = curr_marks[handle_id].second;
-
-                int pre_pos = car_pos_list[handle_id].second;
-                vector<int> &belong_clusters = pre_marks[pre_pos].second;
-                for(int belong_cluster : belong_clusters){
-                    Group &group = cluster2group[belong_cluster];
+                window.push_back(handle_id);
+                int pre_pos = car2position[handle_id].second;
+                for(int convoy_id : inversion_lst[pre_pos].second){
+                    Group &group = groups[convoy_id];
                     group.items.push_back(handle_id);
                     if(group.contain_flag) group.contain_flag = false;
-
-                    if(group.top_cluster == -1) group.top_cluster = end_cluster;
-                    if(group.top_cluster != end_cluster){
-                        group.delimiter.emplace_back(group.top_cluster, group.items.size() - 2);
-                        group.top_cluster = end_cluster;
+                    if(group.items.size() >= m && !group.in_check){
+                        group.in_check = true;
+                        check_lst.insert(convoy_id);
                     }
                 }
             }
             else{
-                for(auto &entry : cluster2group){
-                    Group &group = entry.second;
-                    if(group.delimiter.empty()){
-                        if(group.top_cluster == handle_cluster){
-                            if(!group.contain_flag){
-                                candidates.insert(vector<int>(group.items.begin() + group.offset, group.items.end()));
-                                if(group.items.size() - group.offset == group.max_size) group.extend_flag = true;
-                            }
+                // 收集符合条件的candidate
+//                bool as_convoy = true;
+                for(int convoy_id : check_lst){
+                    Group &group = groups[convoy_id];
+                    if(group.contain_flag) continue;
 
-                            group.offset = group.items.size();
-                            group.top_cluster = -1;
-                            group.contain_flag = false;
-                        }
+                    deque<int> &items = group.items;
+                    int min_top_cluster = belong_clusters[items.front()].second;
+                    if(min_top_cluster == handle_cluster){
+                        candidates.insert(make_pair(vector<int>(items.begin(), items.end()), begin_times[convoy_id]));
+//                        if(items.size() == window.size()) as_convoy = false;
+                        if(items.size() == group.max_size) group.extend_flag = true;
+                        group.contain_flag = true;
                     }
-                    else{
-                        int bottom_cluster = group.delimiter.front().first;
-                        if(bottom_cluster == handle_cluster){
-                            if(!group.contain_flag){
-                                candidates.insert(vector<int>(group.items.begin() + group.offset, group.items.end()));
-                                group.contain_flag = true;
-                                if(group.items.size() - group.offset == group.max_size) group.extend_flag = true;
-                            }
+                }
+//                if(as_convoy && camera_length - camera_idx >= k)
+//                    candidates.insert(make_pair(vector<int>(window.begin(), window.end()), camera_idx));
+                // 删除不可能属于之后要处理的聚类的车辆
+                while(!window.empty()){
+                    int crt_handle_id = window.front();
+                    if(belong_clusters[crt_handle_id].second != handle_cluster) break;
 
-                            group.offset = group.delimiter.front().second + 1;
-                            group.delimiter.pop_front();
+                    window.pop_front();
+                    int pre_pos = car2position[crt_handle_id].second;
+                    for(int convoy_id : inversion_lst[pre_pos].second){
+                        Group &group = groups[convoy_id];
+                        group.items.pop_front();
+                        if(group.in_check && group.items.size() < m){
+                            group.in_check = false;
+                            check_lst.erase(convoy_id);
                         }
                     }
                 }
@@ -114,56 +127,59 @@ void ST_Miner2::mine(Result &result, ll m, ll k, double eps) {
                 handle_id--;
             }
         }
-        for(auto &entry : cluster2group){
-            Group &group = entry.second;
-            if(!group.contain_flag){
-                candidates.insert(vector<int>(group.items.begin() + group.offset, group.items.end()));
-                if(group.items.size() - group.offset == group.max_size) group.extend_flag = true;
-            }
+        // 收集符合条件的candidate
+//        bool as_convoy = true;
+        for(int convoy_id : check_lst){
+            Group &group = groups[convoy_id];
+            if(group.contain_flag) continue;
+
+            deque<int> &items = group.items;
+            candidates.insert(make_pair(vector<int>(items.begin(), items.end()), begin_times[convoy_id]));
+//            if(items.size() == window.size()) as_convoy = false;
+            if(items.size() == group.max_size) group.extend_flag = true;
         }
+//        if(as_convoy && camera_length - camera_idx >= k)
+//            candidates.insert(make_pair(vector<int>(window.begin(), window.end()), camera_idx));
         // 添加convoy到结果集
-        if(camera_idx >= k){
-            for(auto &entry : cluster2group){
-                int cluster_id = entry.first;
-                if(result.redundant_flag) add_result(result, pre_clusters[cluster_id], camera_idx - 1, m);
-                else{
-                    if(!entry.second.extend_flag)
-                        add_result(result, pre_clusters[cluster_id], camera_idx - 1, m);
-                }
+        for(int convoy_id = 0; convoy_id < pre_convoys.size(); convoy_id++){
+            if(camera_idx - begin_times[convoy_id] < k) continue;
+            if(result.redundant_flag)
+                add_result(result, pre_convoys[convoy_id], begin_times[convoy_id], camera_idx - 1, m);
+            else{
+                if(!groups[convoy_id].extend_flag)
+                    add_result(result, pre_convoys[convoy_id], begin_times[convoy_id], camera_idx - 1, m);
             }
         }
-        // 更新pre_clusters
-        pre_clusters.clear();
-        for(const vector<int> &candidate : candidates){
-            pre_clusters.emplace_back();
-            vector<int> &pre_cluster = pre_clusters.back();
-            for(int handle_id : candidate) pre_cluster.push_back(car_pos_list[handle_id].first);
+        // 更新pre_convoys和begin_times
+        pre_convoys.clear();
+        begin_times.clear();
+        for(const auto &p : candidates){
+            pre_convoys.emplace_back();
+            vector<int> &pre_convoy = pre_convoys.back();
+            for(int handle_id : p.first) pre_convoy.push_back(car2position[handle_id].first);
+            begin_times.push_back(p.second);
         }
-        // 更新pre_marks
-        pre_marks.clear();
+        // 更新inversion_lst
+        inversion_lst.clear();
         map<int, int> car2pos;
-        for(pair<int, int> &p : car_pos_list){
+        for(pair<int, int> &p : car2position){
             int car_id = p.first;
-            car2pos[car_id] = pre_marks.size();
-            pre_marks.emplace_back(car_id, vector<int>());
+            car2pos[car_id] = inversion_lst.size();
+            inversion_lst.emplace_back(car_id, vector<int>());
         }
-        for(int cluster_id = 0;cluster_id < pre_clusters.size();cluster_id++){
-            vector<int> &pre_cluster = pre_clusters[cluster_id];
-            for(int car_id : pre_cluster){
-                pre_marks[car2pos[car_id]].second.push_back(cluster_id);
-            }
+        for(int convoy_id = 0; convoy_id < pre_convoys.size(); convoy_id++){
+            vector<int> &pre_convoy = pre_convoys[convoy_id];
+            for(int car_id : pre_convoy) inversion_lst[car2pos[car_id]].second.push_back(convoy_id);
         }
-        for(auto it = pre_marks.begin();it != pre_marks.end();){
-            if(it->second.empty()) it = pre_marks.erase(it);
+        for(auto it = inversion_lst.begin(); it != inversion_lst.end();){
+            if(it->second.empty()) it = inversion_lst.erase(it);
             else it++;
         }
     }
     // 收集convoy到结果集
-    if(camera_length >= k){
-        for(vector<int> &pre_cluster : pre_clusters){
-            // add-results 0, camera_length
-            add_result(result, pre_cluster, camera_length - 1, m);
-        }
+    for(int convoy_id = 0; convoy_id < pre_convoys.size(); convoy_id++){
+        if(camera_length - begin_times[convoy_id] < k) continue;
+        add_result(result, pre_convoys[convoy_id], begin_times[convoy_id], camera_length - 1, m);
     }
 }
 
@@ -221,7 +237,7 @@ void ST_Miner2::get_clusters(int camera_idx, ll m, double eps, vector<pair<int, 
     }
 }
 
-void ST_Miner2::add_result(Result &result, vector<int> &cluster, int end_time, ll m) {
+void ST_Miner2::add_result(Result &result, vector<int> &cluster, int begin_time, int end_time, ll m) {
     bool need_collect = false;
     map<int, vector<int>> car2ids;
     for(int car_id : cluster){
@@ -252,9 +268,9 @@ void ST_Miner2::add_result(Result &result, vector<int> &cluster, int end_time, l
     for(vector<int> &car_ids : car_ids_list){
         value.emplace_back();
         vector<ll> &temp_ids = value.back();
-        for(int car_id : car_ids) temp_ids.push_back(begin_ids[car_id]);
+        for(int car_id : car_ids) temp_ids.push_back(begin_ids[car_id] + begin_time);
     }
-    result.insert(key, value, end_time + 1);
+    result.insert(key, value, end_time - begin_time + 1);
 }
 
 void ST_Miner2::collect_items(map<int, vector<int>>& car2ids, map<int, vector<int>>::iterator it, vector<int>& car_ids, vector<vector<int>>& car_ids_list) {

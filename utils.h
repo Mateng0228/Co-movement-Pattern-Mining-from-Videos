@@ -112,115 +112,70 @@ int count_unique(vector<int>& list) {
     return counts;
 }
 
-// 检测两文件中的convoy是否一致(文件中convoy的格式为"1 2 3,A B C")
-void check(string path1, string path2){
-    map<set<int>, set<vector<int>>> convoy1;
-    ifstream fin1;
-    fin1.open(path1, ios::in);
-    string buffer;
-    getline(fin1, buffer);
-    while(getline(fin1, buffer)){
-        set<int> objects;
-        vector<int> sequence;
-        int pos = buffer.find(',');
-        string object_str = buffer.substr(0, pos);
-        string sequence_str = buffer.substr(pos + 1, buffer.length() - 1 - pos);
-        object_str += " ";
-        int left = 0, right = object_str.find(' ', 0);
-        while(right != std::string::npos){
-            objects.insert(stoi(object_str.substr(left, right - left)));
-            left = right + 1;
-            right = object_str.find(' ', left);
-        }
-        sequence_str += " ";
-        left = 0, right = sequence_str.find(' ', 0);
-        while(right != std::string::npos){
-            sequence.push_back(stoi(sequence_str.substr(left, right - left)));
-            left = right + 1;
-            right = sequence_str.find(' ', left);
-        }
-        if(convoy1.find(objects) == convoy1.end()) convoy1[objects] = set<vector<int>>();
-        convoy1[objects].insert(sequence);
-    }
-    fin1.close();
+void deduplicate(set<vector<int>> &candidates){
+    if(candidates.empty()) return;
 
-    map<set<int>, set<vector<int>>> convoy2;
-    ifstream fin2;
-    fin2.open(path2, ios::in);
-    getline(fin2, buffer);
-    while(getline(fin2, buffer)){
-        set<int> objects;
-        vector<int> sequence;
-        int pos = buffer.find(',');
-        string object_str = buffer.substr(0, pos);
-        string sequence_str = buffer.substr(pos + 1, buffer.length() - 1 - pos);
-        object_str += " ";
-        int left = 0, right = object_str.find(' ', 0);
-        while(right != std::string::npos){
-            objects.insert(stoi(object_str.substr(left, right - left)));
-            left = right + 1;
-            right = object_str.find(' ', left);
-        }
-        sequence_str += " ";
-        left = 0, right = sequence_str.find(' ', 0);
-        while(right != std::string::npos){
-            sequence.push_back(stoi(sequence_str.substr(left, right - left)));
-            left = right + 1;
-            right = sequence_str.find(' ', left);
-        }
-        if(convoy2.find(objects) == convoy2.end()) convoy2[objects] = set<vector<int>>();
-        convoy2[objects].insert(sequence);
+    vector<set<vector<int>>::iterator> itr_lst;
+    vector<vector<int>> stub_candidates;
+    for(auto it = candidates.begin(); it != candidates.end(); it++)
+        itr_lst.push_back(it);
+    sort(itr_lst.begin(), itr_lst.end(), [](const auto &itr1, const auto &itr2){
+        return itr1->size() < itr2->size();
+    });
+    for(auto &itr : itr_lst){
+        stub_candidates.emplace_back(itr->begin(), itr->end());
+        vector<int> &back_candidate = stub_candidates.back();
+        sort(back_candidate.begin(), back_candidate.end());
     }
-    fin2.close();
-
-    map<set<int>, set<vector<int>>> diff_map1, diff_map2;
-    for(auto &p : convoy1){
-        const set<int>& objects1 = p.first;
-        if(convoy2.find(objects1) == convoy2.end()) diff_map1[objects1] = p.second;
-        else{
-            set<vector<int>>& sequence_list1 = p.second;
-            set<vector<int>>& sequence_list2 = convoy2[objects1];
-            for(const vector<int>& sequence1 : sequence_list1){
-                if(sequence_list2.find(sequence1) == sequence_list2.end()){
-                    if(diff_map1.find(objects1) == diff_map1.end()) diff_map1[objects1] = set<vector<int>>();
-                    diff_map1[objects1].insert(sequence1);
-                }
-                else sequence_list2.erase(sequence1);
+    vector<set<vector<int>>::iterator> erase_lst;
+    for(int i = 0; i < itr_lst.size() - 1; i++){
+        const vector<int> &check_cand = stub_candidates[i];
+        auto check_size = check_cand.size();
+        for(int j = i + 1; j < itr_lst.size(); j++){
+            const vector<int> &temp_cand = stub_candidates[j];
+            if(check_size == temp_cand.size()) continue;
+            if(includes(temp_cand.begin(), temp_cand.end(), check_cand.begin(), check_cand.end())){
+                erase_lst.push_back(itr_lst[i]);
+                break;
             }
-            if(!sequence_list2.empty()) diff_map2[objects1] = sequence_list2;
         }
-        convoy2.erase(objects1);
     }
-    diff_map2.insert(convoy2.begin(), convoy2.end());
+    for(auto &erase_itr : erase_lst){
+        candidates.erase(erase_itr);
+    }
+}
 
-    cout<<"convoy1 differences:--------------------"<<endl;
-    int counts = 0;
-    for(auto &p : diff_map1){
-        cout<<"{";
-        for(int object : p.first) cout<<object<<",";
-        cout<<"} : [";
-        for(const vector<int>& sequence : p.second){
-            counts++;
-            for(int item : sequence) cout<<item<<"-";
-            cout<<", ";
-        }
-        cout<<"]"<<endl;
+void deduplicate(set<pair<vector<int>, int>> &candidates){
+    if(candidates.empty()) return;
+
+    vector<set<pair<vector<int>, int>>::iterator> itr_lst;
+    vector<pair<vector<int>, int>> stub_candidates;
+    for(auto it = candidates.begin(); it != candidates.end(); it++) itr_lst.push_back(it);
+    sort(itr_lst.begin(), itr_lst.end(), [](const auto &itr1, const auto &itr2){
+        return itr1->first.size() < itr2->first.size();
+    });
+    for(auto &itr : itr_lst){
+        stub_candidates.emplace_back(vector<int>(itr->first.begin(), itr->first.end()), itr->second);
+        auto &back_candidate = stub_candidates.back();
+        sort(back_candidate.first.begin(), back_candidate.first.end());
     }
-    cout<<counts<<endl;
-    counts = 0;
-    cout<<"convoy2 differences:--------------------"<<endl;
-    for(auto &p : diff_map2){
-        cout<<"{";
-        for(int object : p.first) cout<<object<<",";
-        cout<<"} : [";
-        for(const vector<int>& sequence : p.second){
-            counts++;
-            for(int item : sequence) cout<<item<<"-";
-            cout<<", ";
+    vector<set<pair<vector<int>, int>>::iterator> erase_lst;
+    for(int i = 0; i < itr_lst.size() - 1; i++){
+        const auto &check_cand = stub_candidates[i];
+        auto check_size = check_cand.first.size();
+        for(int j = i + 1; j < itr_lst.size(); j++){
+            const auto &temp_cand = stub_candidates[j];
+            if(check_size == temp_cand.first.size()) continue;
+            bool is_include = includes(temp_cand.first.begin(), temp_cand.first.end(), check_cand.first.begin(), check_cand.first.end());
+            if(is_include && check_cand.second >= temp_cand.second){
+                erase_lst.push_back(itr_lst[i]);
+                break;
+            }
         }
-        cout<<"]"<<endl;
     }
-    cout<<counts<<endl;
+    for(auto &erase_itr : erase_lst){
+        candidates.erase(erase_itr);
+    }
 }
 
 #endif //PROJECT_UTILS_H

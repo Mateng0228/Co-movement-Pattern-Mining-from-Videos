@@ -201,7 +201,7 @@ public:
             n_objects++;
             n_convoys += entry.second.size();
         }
-        cout << "Total number of discovered convoys: " << n_convoys << ", object combinations: " << n_objects << endl;
+        cout << "Total number of discovered convoys: " << n_convoys << ", object combinations: " << n_objects<<" - ";
     }
     void print_contents(MiningTree &theTree){
         int n_objects = 0;
@@ -549,7 +549,7 @@ public:
             n_objects++;
             n_convoys += entry.second.size();
         }
-        cout << "Total number of discovered convoys: " << n_convoys << ", object combinations: " << n_objects << endl;
+        cout << "Total number of discovered convoys: " << n_convoys << ", object combinations: " << n_objects<<" - ";
     }
     void print_contents(MiningTree &theTree) {
         int n_objects = 0;
