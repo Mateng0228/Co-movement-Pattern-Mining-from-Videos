@@ -1,20 +1,20 @@
-#ifndef PROJECT_ST_QUERY_H
-#define PROJECT_ST_QUERY_H
+#ifndef PROJECT_QUERY_H
+#define PROJECT_QUERY_H
 
 #include <string>
 #include <vector>
-#include "position.h"
-#include "cluster.h"
-#include "tree.h"
-#include "st_mining1.h"
-#include "st_mining2.h"
-#include "../utils.h"
-#include "../result.h"
+#include "algorithm/position.h"
+#include "algorithm/cluster.h"
+#include "algorithm/tree.h"
+#include "algorithm/mining_base.h"
+#include "algorithm/mining_sw.h"
+#include "algorithm/result.h"
+#include "utils.h"
 
 using namespace std;
 typedef long long ll;
 
-class ST_Query{
+class TCS_Query{
 private:
     void query(MiningTree &mining_tree, ll node_id, vector<int> &sub2complete, Result &result);
 public:
@@ -23,7 +23,7 @@ public:
     ll k;
     double eps;
 
-    ST_Query(string dataset, ll m, ll k, double eps){
+    TCS_Query(string dataset, ll m, ll k, double eps){
         this->dataset = dataset;
         this->m = m;
         this->k = k;
@@ -33,7 +33,7 @@ public:
     void query();
 };
 //ll tot_car = 0, tot_seq = 0, tot_validate = 0;
-void ST_Query::query() {
+void TCS_Query::query() {
     clock_t begin_time = clock();
 
     // 初始化数据
@@ -66,7 +66,7 @@ void ST_Query::query() {
         // 去重
         result.de_duplication();
         // 输出结果
-//        result.print_contents();
+        result.print_contents();
 //        result.dump_contents(mining_tree, "results/base.csv");
     }
     delete[] arr_positions;
@@ -74,7 +74,7 @@ void ST_Query::query() {
     cout<<"Total elapsed time: "<<static_cast<double>(clock() - begin_time) / CLOCKS_PER_SEC<<"s"<<endl;
 }
 
-void ST_Query::query(MiningTree &mining_tree, ll node_id, vector<int> &sub2complete, Result &result) {
+void TCS_Query::query(MiningTree &mining_tree, ll node_id, vector<int> &sub2complete, Result &result) {
     MiningNode *tree = mining_tree.tree;
     if(tree[node_id].is_leaf) return;
 
@@ -86,7 +86,7 @@ void ST_Query::query(MiningTree &mining_tree, ll node_id, vector<int> &sub2compl
         vector<ll> begin_ids;
         vector<int> cars;
         for(ll i = leaf_left; i <= leaf_right; i++){
-            MiningNode& leaf_node = tree[mining_tree.leaves[i]];
+            MiningNode &leaf_node = tree[mining_tree.leaves[i]];
             ll begin_id = leaf_node.end - leaf_node.depth;
             begin_ids.push_back(begin_id);
             int positions_list_idx = mining_tree.terminator2ListId[mining_tree.text[leaf_node.end - 1].camera];
@@ -96,7 +96,7 @@ void ST_Query::query(MiningTree &mining_tree, ll node_id, vector<int> &sub2compl
         if(n_cars < m) return;
 
 //        tot_car += cars.size(); tot_seq += common_length, tot_validate += 1;
-        ST_Miner2 miner(common_length, begin_ids, cars, mining_tree);
+        SW_Miner miner(common_length, begin_ids, cars, mining_tree);
         miner.mine(result, m, k, eps);
     }
     for(auto & entry : tree[node_id].next){
@@ -105,4 +105,4 @@ void ST_Query::query(MiningTree &mining_tree, ll node_id, vector<int> &sub2compl
     }
 }
 
-#endif //PROJECT_ST_QUERY_H
+#endif //PROJECT_QUERY_H

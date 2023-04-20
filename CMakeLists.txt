@@ -5,4 +5,4 @@ set(CMAKE_CXX_STANDARD 14)
 #set(CMAKE_EXE_LINKER_FLAGS -static)
 #add_compile_options(-O3)
 
-add_executable(Project main.cpp algorithm1/cmc_tree.h algorithm1/group.h utils.h algorithm1/cmc_mining.h algorithm1/cmc_query.h algorithm2/st_query.h algorithm2/position.h algorithm2/cluster.h algorithm2/tree.h algorithm2/st_mining1.h algorithm2/st_mining2.h result.h)
+add_executable(Project main.cpp utils.h query.h algorithm/position.h algorithm/cluster.h algorithm/tree.h algorithm/mining_base.h algorithm/mining_sw.h algorithm/result.h)

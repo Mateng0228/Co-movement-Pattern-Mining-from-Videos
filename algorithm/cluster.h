@@ -6,7 +6,7 @@
 #include <iostream>
 #include "position.h"
 
-#define UNCERTAIN -1
+#define UNCERTAIN (-1)
 using namespace std;
 typedef long long ll;
 
@@ -22,7 +22,7 @@ struct car_info{
     }
 };
 
-void MergeSCAN(vector<car_info>& car_infos, vector<pair<int, int>>& clusters, vector<pair<int, int>>& groups, ll m, double eps){
+void temporal_cluster(vector<car_info>& car_infos, vector<pair<int, int>>& clusters, vector<pair<int, int>>& groups, ll m, double eps){
     if(car_infos.empty()) return;
 
     sort(car_infos.begin(), car_infos.end(), [](const car_info &info1, const car_info &info2){
@@ -103,7 +103,7 @@ void add_cluster_mark(vector<position> *arr_positions, int arr_size, ll m, doubl
         vector<car_info>& car_infos = entry.second;
         vector<pair<int, int>> clusters;
         vector<pair<int, int>> groups;
-        MergeSCAN(car_infos, clusters, groups, m, eps);
+        temporal_cluster(car_infos, clusters, groups, m, eps);
 
         for(int group_idx = 0;group_idx < groups.size();group_idx++){
             int begin_cluster_idx = groups[group_idx].first;

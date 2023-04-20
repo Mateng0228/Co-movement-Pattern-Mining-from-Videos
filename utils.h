@@ -9,7 +9,7 @@
 #include <set>
 #include <iostream>
 #include <algorithm>
-#include "algorithm2/position.h"
+#include "algorithm/position.h"
 
 using namespace std;
 // 获得某文件夹下所有的子文件（不递归获得子文件夹内的文件）

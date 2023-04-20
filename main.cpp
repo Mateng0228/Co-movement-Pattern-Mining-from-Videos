@@ -1,6 +1,5 @@
 #include <iostream>
-#include "algorithm1/cmc_query.h"
-#include "algorithm2/st_query.h"
+#include "query.h"
 
 using namespace std;
 int main(int argc, char *argv[]) {
@@ -16,11 +15,8 @@ int main(int argc, char *argv[]) {
     cout<<"parameters: "<<dataset<<" "<<m<<" "<<k<<" "<<eps<<" - ";
 
     // query
-//    CMC_Query cmc_query(dataset, m, k, eps);
-//    cmc_query.query();
-
-    ST_Query st_query(dataset, m, k, eps);
-    st_query.query();
+    TCS_Query tcs_query(dataset, m, k, eps);
+    tcs_query.query();
 
     return 0;
 }

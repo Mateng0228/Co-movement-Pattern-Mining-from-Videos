@@ -9,7 +9,7 @@
 #include <climits>
 #include <iostream>
 #include <fstream>
-#include "algorithm2/tree.h"
+#include "tree.h"
 
 using namespace std;
 typedef long long ll;

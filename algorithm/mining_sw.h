@@ -1,19 +1,19 @@
-#ifndef PROJECT_ST_MINING2_H
-#define PROJECT_ST_MINING2_H
+#ifndef PROJECT_MINING_SW_H
+#define PROJECT_MINING_SW_H
 
 #include <algorithm>
 #include <deque>
 #include "tree.h"
-#include "../result.h"
+#include "result.h"
 
 typedef long long ll;
-class ST_Miner2{
+class SW_Miner{
 private:
     ll camera_length;
     int car_length;
-    vector<ll>& begin_ids;
-    vector<int>& cars;
-    MiningTree& mining_tree;
+    vector<ll> &begin_ids;
+    vector<int> &cars;
+    MiningTree &mining_tree;
 
     void get_clusters(int camera_idx, ll m, double eps, vector<pair<int, int>> &car_ids, vector<pair<int, int>> &cluster_marks);
     void add_result(Result &result, vector<int> &cluster, int begin_time, int end_time, ll m);
@@ -26,7 +26,7 @@ private:
         bool in_check = false;
     };
 public:
-    ST_Miner2(ll length, vector<ll>& begin_ids, vector<int>& cars, MiningTree& tree):
+    SW_Miner(ll length, vector<ll> &begin_ids, vector<int> &cars, MiningTree &tree):
             camera_length(length), begin_ids(begin_ids), cars(cars), mining_tree(tree){
         car_length = cars.size();
     }
@@ -34,7 +34,7 @@ public:
     void mine(Result &result, ll m, ll k, double eps);
 };
 
-void ST_Miner2::mine(Result &result, ll m, ll k, double eps) {
+void SW_Miner::mine(Result &result, ll m, ll k, double eps) {
     // 待延长的候选convoys
     vector<vector<int>> pre_convoys;
     vector<int> begin_times;
@@ -183,7 +183,7 @@ void ST_Miner2::mine(Result &result, ll m, ll k, double eps) {
     }
 }
 
-void ST_Miner2::get_clusters(int camera_idx, ll m, double eps, vector<pair<int, int>> &car_ids, vector<pair<int, int>> &cluster_marks) {
+void SW_Miner::get_clusters(int camera_idx, ll m, double eps, vector<pair<int, int>> &car_ids, vector<pair<int, int>> &cluster_marks) {
     position* text = mining_tree.text;
     sort(car_ids.begin(), car_ids.end(), [&](const pair<int, int> &item1, const pair<int, int> &item2){
         int car_id1 = item1.first, car_id2 = item2.first;
@@ -237,7 +237,7 @@ void ST_Miner2::get_clusters(int camera_idx, ll m, double eps, vector<pair<int, 
     }
 }
 
-void ST_Miner2::add_result(Result &result, vector<int> &cluster, int begin_time, int end_time, ll m) {
+void SW_Miner::add_result(Result &result, vector<int> &cluster, int begin_time, int end_time, ll m) {
     bool need_collect = false;
     map<int, vector<int>> car2ids;
     for(int car_id : cluster){
@@ -273,7 +273,7 @@ void ST_Miner2::add_result(Result &result, vector<int> &cluster, int begin_time,
     result.insert(key, value, end_time - begin_time + 1);
 }
 
-void ST_Miner2::collect_items(map<int, vector<int>>& car2ids, map<int, vector<int>>::iterator it, vector<int>& car_ids, vector<vector<int>>& car_ids_list) {
+void SW_Miner::collect_items(map<int, vector<int>>& car2ids, map<int, vector<int>>::iterator it, vector<int>& car_ids, vector<vector<int>>& car_ids_list) {
     if(it == car2ids.end()){
         car_ids_list.push_back(car_ids);
         return;
@@ -285,4 +285,4 @@ void ST_Miner2::collect_items(map<int, vector<int>>& car2ids, map<int, vector<in
     }
 }
 
-#endif //PROJECT_ST_MINING2_H
+#endif //PROJECT_MINING_SW_H
