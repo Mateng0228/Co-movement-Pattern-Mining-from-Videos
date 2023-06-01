@@ -1,0 +1,8 @@
+nohup: ignoring input
+m = 3, k = 5, eps = 60
+Path = ../../../dataset/chengdu
+total convoy number is : 4327
+total continues route number is : 1313
+running time : 1618.401051(s)
+duplicating time : 9.441748(s)
+candidate number: 866330
