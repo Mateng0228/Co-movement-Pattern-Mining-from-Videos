@@ -32,7 +32,7 @@ public:
 
     void query();
 };
-//ll tot_car = 0, tot_seq = 0, tot_validate = 0;
+
 void TCS_Query::query() {
     clock_t begin_time = clock();
 
@@ -43,6 +43,7 @@ void TCS_Query::query() {
     auto *arr_positions = new vector<position>[arr_size];
     fill_data(arr_positions, data_paths);
 
+//    clock_t record_time = clock();
     // 为各车辆的摄像头添加聚类和分组信息
     add_cluster_mark(arr_positions, arr_size, m, eps);
 //    for(int i = 0;i < arr_size;i++){
@@ -51,6 +52,8 @@ void TCS_Query::query() {
 //            pst.group = 1;
 //        }
 //    }
+//    cout<<"cluster: "<<static_cast<double>(clock() - record_time) / CLOCKS_PER_SEC<<" | ";
+//    record_time = clock();
     // 去掉不属于任何聚类的position
     vector<vector<position>> positions_list;
     vector<int> sub2complete;
@@ -59,15 +62,20 @@ void TCS_Query::query() {
     else{
         // 构建后缀树
         MiningTree mining_tree(positions_list);
+//        cout<<"build tree: "<<static_cast<double>(clock() - record_time) / CLOCKS_PER_SEC<<" | ";
+//        record_time = clock();
         // 获得未去重的结果集
         ResultBaseImpl result;
 //        ResultTwoMapImpl result(mining_tree);
         query(mining_tree, mining_tree.root, sub2complete, result);
+//        cout<<"verification: "<<static_cast<double>(clock()-record_time)/CLOCKS_PER_SEC - insert_time/CLOCKS_PER_SEC<<" | ";
+//        record_time = clock();
         // 去重
         result.de_duplication();
+//        cout<<"de_duplicate: "<<static_cast<double>(clock()-record_time)/CLOCKS_PER_SEC + insert_time/CLOCKS_PER_SEC<<" | ";
         // 输出结果
         result.print_contents();
-//        result.dump_contents(mining_tree, "results/base.csv");
+//        result.dump_contents(mining_tree, "results/new_3_3_5.csv");
     }
     delete[] arr_positions;
 
@@ -95,7 +103,6 @@ void TCS_Query::query(MiningTree &mining_tree, ll node_id, vector<int> &sub2comp
         int n_cars = count_unique(cars);
         if(n_cars < m) return;
 
-//        tot_car += cars.size(); tot_seq += common_length, tot_validate += 1;
         SW_Miner miner(common_length, begin_ids, cars, mining_tree);
         miner.mine(result, m, k, eps);
     }

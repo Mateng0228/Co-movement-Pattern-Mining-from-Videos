@@ -327,53 +327,6 @@ private:
             if(itr->second.empty()) cars2path.erase(itr);
         }
     }
-    // 去除两个键值对之间可能的冗余项，其中idx1指向的键包含idx2指向的键
-    void de_duplication(vector<map<vector<ll>, set<vector<ll>>>::iterator> &idx2itr, int idx1, int idx2){
-        const vector<ll> &cars1 = idx2itr[idx1]->first, &cars2 = idx2itr[idx2]->first;
-        vector<int> car_ids;// cars2包含的car分别在cars1中的位置
-        int p1 = 0, p2 = 0;
-        while(p2 != cars2.size()){
-            if(p1 == cars1.size()){
-                cerr<<"cars1 并不包含 cars2"<<endl;
-                return;
-            }
-            if(cars1[p1] != cars2[p2]) p1++;
-            else{
-                car_ids.push_back(p1);
-                p1++; p2++;
-            }
-        }
-        // 开始逐个去重
-        set<vector<ll>> &paths1 = idx2itr[idx1]->second, &paths2 = idx2itr[idx2]->second;
-        for(auto itr = paths2.begin(); itr != paths2.end();){
-            const vector<ll> &target_path = *itr;
-            ll target_length = target_path.back();
-
-            bool delete_flag = false;
-            for(const vector<ll> &current_path : paths1){
-                ll current_length = current_path.back();
-                vector<pair<ll, ll>> current_ranges;
-                for(int car_id : car_ids)
-                    current_ranges.emplace_back(current_path[car_id], current_path[car_id] + current_length - 1);
-
-                bool contain_flag = true;// 表示current_path是否完全包含target_path
-                for(int range_id = 0; range_id < current_ranges.size(); range_id++){
-                    ll target_begin = target_path[range_id], target_end = target_begin + target_length - 1;
-                    pair<ll, ll> &current_range = current_ranges[range_id];
-                    if(!(current_range.first <= target_begin && current_range.second >= target_end)){
-                        contain_flag = false;
-                        break;
-                    }
-                }
-                if(contain_flag){
-                    delete_flag = true;
-                    break;
-                }
-            }
-            if(delete_flag) itr = paths2.erase(itr);
-            else itr++;
-        }
-    }
 public:
     explicit ResultTwoMapImpl(MiningTree &theTree) : mining_tree(theTree){
         redundant_flag = true;
@@ -465,80 +418,7 @@ public:
     }
 
     void de_duplication() override {
-        vector<map<vector<ll>, set<vector<ll>>>::iterator> idx2itr;
-        int curr_idx = 0;
-        map<int, vector<int>> length2idx;
-        for(auto itr = cars2path.begin();itr != cars2path.end();itr++){
-            int length = itr->first.size();
-            auto target_itr = length2idx.find(length);
-            if(target_itr == length2idx.end()) length2idx[length] = vector<int>{curr_idx};
-            else target_itr->second.push_back(curr_idx);
-
-            idx2itr.push_back(itr);
-            curr_idx++;
-        }
-        //初始化基础数据结构
-        vector<int> idcs; //按所指向cars集合的大小升序逐层排列
-        vector<vector<int>> out_links; //记录所有点的出边（若a包含b，则b指向a）
-        vector<int> starts; //记录idcs中每层的开始位置
-        int item_idx = 0;
-        for(auto &entry : length2idx){
-            starts.push_back(item_idx);
-            item_idx += entry.second.size();
-            for(int idx : entry.second){
-                idcs.push_back(idx);
-                out_links.emplace_back();
-            }
-        }
-        // 初始化倒排表
-        unordered_map<ll, unordered_set<int>> inversion_list;
-        for(int i = 0; i < idcs.size(); i++){
-            const vector<ll> &cars = idx2itr[idcs[i]]->first;
-            for(ll car : cars){
-                auto itr = inversion_list.find(car);
-                if(itr == inversion_list.end()) inversion_list[car] = unordered_set<int>{i};
-                else itr->second.insert(i);
-            }
-        }
-
-        for(int level = 0;level < starts.size();level++){
-            int start_idx = starts[level];
-            int end_idx = (level == starts.size() - 1) ? idcs.size() - 1 : starts[level + 1] - 1;
-            for(int i = start_idx; i <= end_idx; i++){
-                const vector<ll>& cars = idx2itr[idcs[i]]->first;
-                // 选择涉及key最少的car取交集
-                int min_contains = INT_MAX;ll min_car = -1;
-                for(ll car : cars){
-                    int curr_contains = inversion_list[car].size();
-                    if(curr_contains < min_contains){
-                        min_contains = curr_contains;
-                        min_car = car;
-                    }
-                }
-                if(min_car == -1) cerr << "very weird, from ResultTwoMapImpl::de_duplication" << endl;
-
-                unordered_set<int> intersection = inversion_list[min_car];
-                for(ll car : cars){
-                    if(car == min_car) continue;
-                    unordered_set<int> &large_set = inversion_list[car];
-                    for(auto itr = intersection.begin();itr != intersection.end();){
-                        if(large_set.find(*itr) == large_set.end()) itr = intersection.erase(itr);
-                        else itr++;
-                    }
-                }
-                intersection.erase(i);
-                for(int super_idx : intersection){
-                    out_links[i].push_back(super_idx);
-                }
-                // 删除当前idx在倒排表中的信息（由于idx为拓扑序，故可以安全删除）
-                for(ll car : cars) inversion_list[car].erase(i);
-            }
-        }
-        // 倒序逐对去重
-        for(int idx = out_links.size() - 1;idx >= 0;idx--){
-            vector<int> &supers = out_links[idx];
-            for(int super_idx : supers) de_duplication(idx2itr, idcs[super_idx], idcs[idx]);
-        }
+        // The main processing of hashing-based duplicate elimination can be performed during result insertion
     }
 
     void print_contents() override {

@@ -42,7 +42,6 @@ void Base_Miner::mine(Result &result, ll m, ll k, double eps) {
         dummy_convoy.push_back(car_id);
         inversion_lst.emplace_back(car_id, vector<int>{0});
     }
-
     for(int camera_idx = 0; camera_idx < camera_length; camera_idx++){
         vector<pair<int, int>> car2position; // 记录car_id在倒排表中的位置
         for(int invert_id = 0; invert_id < inversion_lst.size(); invert_id++)
@@ -79,19 +78,19 @@ void Base_Miner::mine(Result &result, ll m, ll k, double eps) {
                 }
             }
             // 收集符合条件的candidate
-//            bool as_convoy = true;
+            bool as_convoy = true;
             for(int check_convoy_id : check_st){
                 vector<int> &intersection = intersections[check_convoy_id];
                 candidates.insert(make_pair(vector<int>(intersection.begin(), intersection.end()), begin_times[check_convoy_id]));
-//                if(intersection.size() == cluster_bound.second - cluster_bound.first + 1) as_convoy = false;
+                if(intersection.size() == cluster_bound.second - cluster_bound.first + 1) as_convoy = false;
                 if(intersection.size() == pre_convoys[check_convoy_id].size()) extend_flags[check_convoy_id] = true;
             }
-//            if(as_convoy && camera_length - camera_idx >= k){
-//                vector<int> crt_cluster;
-//                for(int idx = cluster_bound.first; idx <= cluster_bound.second; idx++)
-//                    crt_cluster.push_back(car2position[idx].first);
-//                candidates.insert(make_pair(crt_cluster, camera_idx));
-//            }
+            if(as_convoy && camera_length - camera_idx >= k){
+                vector<int> crt_cluster;
+                for(int idx = cluster_bound.first; idx <= cluster_bound.second; idx++)
+                    crt_cluster.push_back(car2position[idx].first);
+                candidates.insert(make_pair(crt_cluster, camera_idx));
+            }
         }
         // 将无法继续延长的pre_convoy添加到待去重的结果集中
         for(int convoy_id = 0; convoy_id < pre_convoys.size(); convoy_id++){
@@ -103,7 +102,7 @@ void Base_Miner::mine(Result &result, ll m, ll k, double eps) {
                     add_result(result, pre_convoys[convoy_id], begin_times[convoy_id], camera_idx - 1, m);
             }
         }
-        deduplicate(candidates);
+//        deduplicate(candidates);
         // 更新pre_convoys
         pre_convoys.clear();
         begin_times.clear();
