@@ -2,4 +2,3 @@ cmake-build-debug
 cmake-build-remotedebug
 .idea
 results/
-datasets/
