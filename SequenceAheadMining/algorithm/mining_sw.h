@@ -236,7 +236,7 @@ void SW_Miner::get_clusters(int camera_idx, ll m, double eps, vector<pair<int, i
         else pre_idx = curr_idx - 1;
     }
 }
-//double insert_time = 0.0;
+
 void SW_Miner::add_result(Result &result, vector<int> &cluster, int begin_time, int end_time, ll m) {
     bool need_collect = false;
     map<int, vector<int>> car2ids;
@@ -270,9 +270,7 @@ void SW_Miner::add_result(Result &result, vector<int> &cluster, int begin_time, 
         vector<ll> &temp_ids = value.back();
         for(int car_id : car_ids) temp_ids.push_back(begin_ids[car_id] + begin_time);
     }
-//    clock_t insert_before = clock();
     result.insert(key, value, end_time - begin_time + 1);
-//    insert_time += static_cast<double>(clock() - insert_before);
 }
 
 void SW_Miner::collect_items(map<int, vector<int>>& car2ids, map<int, vector<int>>::iterator it, vector<int>& car_ids, vector<vector<int>>& car_ids_list) {
