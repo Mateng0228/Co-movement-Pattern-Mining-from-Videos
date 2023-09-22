@@ -1,3 +1,0 @@
-/home/zju/junnan/tmp/cmc/cmake-build-release/CMakeFiles/rebuild_cache.dir
-/home/zju/junnan/tmp/cmc/cmake-build-release/CMakeFiles/edit_cache.dir
-/home/zju/junnan/tmp/cmc/cmake-build-release/CMakeFiles/cmc.dir

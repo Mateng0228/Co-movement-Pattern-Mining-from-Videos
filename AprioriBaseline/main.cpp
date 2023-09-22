@@ -6,18 +6,15 @@
 int main(int argc, char *argv[]) {
     clock_t start_time, end_time;
     start_time = clock();
-    sscanf(argv[1], "%lld", &m);
-    sscanf(argv[2], "%lld", &k);
-    sscanf(argv[3], "%lld", &eps);
-    string index = argv[4];
+    string index = argv[1];
+    sscanf(argv[2], "%lld", &m);
+    sscanf(argv[3], "%lld", &k);
+    sscanf(argv[4], "%lld", &eps);
 
-    path = "../../../dataset/";
+    path = "datasets/";
     path += index;
-    //path = "../dataset/singapore";
     cout<<"m = "<<m<<", k = "<<k<<", eps = "<<eps<<endl;
-    // path = "../dataset/video_sg/t14_c600_len16";
     cout<<"Path = "<<path<<endl;
-    //getAllFiles(fileName, path, ".txt");
     GetFileNames(path, fileName);
     getData(objectRoute, fileName, objectId);
 

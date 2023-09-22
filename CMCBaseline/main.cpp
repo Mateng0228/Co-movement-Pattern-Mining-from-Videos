@@ -18,18 +18,14 @@ map<ll, vector<ll>> linkCamera;
 int main(int argc, char *argv[]) {
     clock_t beginTime, endTime;
     beginTime = clock();
-    sscanf(argv[1], "%lld", &m);
-    sscanf(argv[2], "%lld", &k);
-    sscanf(argv[3], "%lld", &eps);
-    string index = argv[4];
+    string index = argv[1];
+    sscanf(argv[2], "%lld", &m);
+    sscanf(argv[3], "%lld", &k);
+    sscanf(argv[4], "%lld", &eps);
 
     printf("m = %lld, k = %lld, eps = %lld\n", m, k, eps);
-    path = "../../../dataset/";
+    path = "datasets/";
     path += index;
-    // path += "chengdu_1020";
-    // path += "singapore";
-    // path += "carla/t16_c600_len14";
-    // path += "video_sg/t14_c600_len16";
     cout << "path:" << path << endl;
 
     // 获得文件路径

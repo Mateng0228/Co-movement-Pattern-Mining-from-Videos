@@ -1,7 +1,0 @@
-nohup: ignoring input
-m = 3, k = 5, eps = 60
-Path = ../../../dataset/various_objects/chengdu/objects_10000
-total convoy number is : 4327
-total continues route number is : 1313
-running time : 1673.394773(s)
-duplicating time : 9.250667(s)
