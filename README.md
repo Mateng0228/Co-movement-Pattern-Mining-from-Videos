@@ -1,16 +1,8 @@
-<style>
-  .center-image {
-    display: block;
-    margin: 0 auto;
-    text-align: center;
-  }
-</style>
-
 <h2 align="center">Co-movement Pattern Mining from Videos</h2>
 
-<div class="center-image">
-  <img src="teaser.png" alt="teaser" width="35%" style="margin-bottom:10px;">
-</div>
+<p align="center">
+  <img src="teaser.png" alt="teaser" width="35%">
+</p>
 
 This project provides the source code and datasets for our paper  "Co-movement Pattern Mining from Videos." The discovery of co-movement patterns involves identifying all groups of objects that move within spatial proximity for a specified time interval.
 In the paper mentioned above, we expand the meanings of co-movement patterns by migrating the data source from GPS sensors to surveillance cameras and conduct the first investigation into mining co-movement patterns from videos.
