@@ -16,12 +16,225 @@ typedef long long ll;
 
 class Result{
 public:
-    bool redundant_flag = false;
+    bool redundant_flag = true;
 
     virtual ~Result() = default;
     virtual void insert(vector<ll> &cars, vector<vector<ll>> &begin_ids_list, int length) = 0;
     virtual void de_duplication() = 0;
     virtual void print_contents() = 0;
+    virtual void dump_contents(MiningTree &theTree, string dump_path) = 0;
+};
+
+class ResultBaseImpl : public Result{
+private:
+    map<vector<ll>, list<vector<pair<ll, ll>>>> result_map;
+public:
+    void insert(vector<ll> &cars, vector<vector<ll>> &begin_ids_list, int length) override{
+        list<vector<pair<ll, ll>>> intervals;
+        for(vector<ll> &begin_ids : begin_ids_list){
+            intervals.emplace_back();
+            vector<pair<ll, ll>> &ranges = intervals.back();
+            for(ll begin_id : begin_ids) ranges.emplace_back(begin_id, begin_id + length - 1);
+        }
+
+        auto itr = result_map.find(cars);
+        if(itr == result_map.end()) result_map[cars] = intervals;
+        else{
+            list<vector<pair<ll, ll>>> &main_intervals = itr->second;
+            for(vector<pair<ll, ll>> &target_ranges : intervals)
+                main_intervals.push_back(target_ranges);
+        }
+    }
+
+    void de_duplication() override{
+        map<ll, vector<ll>> car_map;
+        vector<vector<ll>> car_vec;
+        for(auto it = result_map.begin(); it != result_map.end(); it++) {
+            car_vec.push_back(it->first);
+            for(ll car : it->first) {
+                if(car_map.find(car) == car_map.end()) {
+                    vector<ll> id_set;
+                    id_set.push_back(car_vec.size() - 1);
+                    car_map[car] = id_set;
+                }
+                else {
+                    car_map[car].push_back(car_vec.size() - 1);
+                }
+            }
+        }
+
+        for(ll i = 0; i < car_vec.size(); i++) {
+            vector<ll> cars = car_vec[i];
+            vector<ll> result = car_map[cars[0]];
+            for(ll car : cars) {
+                vector<ll> intersec_set = car_map[car];
+                vector<ll> tmp;
+                for(ll j = 0; j < result.size(); j++) {
+                    for(ll k = 0; k < intersec_set.size(); k++) {
+                        if(result[j] == intersec_set[k]) {
+                            tmp.push_back(result[j]);
+                        }
+                    }
+                }
+                result = tmp;
+            }
+            for(ll id : result) {
+                list<vector<pair<ll, ll>>> &parent_path_list = result_map[car_vec[id]];
+                vector<ll> parent_cars = car_vec[id];
+                list<vector<pair<ll, ll>>> &child_path_list = result_map[car_vec[i]];
+                vector<vector<pair<ll, ll>>> child_path_vec;
+                vector<bool> is_dominate(child_path_list.size(),0);
+                for(auto child_path : child_path_list) {
+                    child_path_vec.push_back(child_path);
+                }
+
+                int ans = 0;
+                for(ll m = 0; m < child_path_vec.size();) {
+                    vector<pair<ll, ll>> child_path = child_path_vec[m];
+                    bool is_ok = 0;
+                    for(vector<pair<ll,ll>> parent_path : parent_path_list) {
+                        ll dominate_len = 0;
+                        for(ll j = 0; j < child_path.size(); j++) {
+                            for(ll k = 0; k < parent_path.size(); k++) {
+                                if(cars[j] == parent_cars[k]) {
+                                    if(child_path[j].first >= parent_path[k].first && child_path[j].second <= parent_path[k].second) {
+                                        dominate_len ++;
+                                    }
+                                }
+                            }
+                        }
+                        if(dominate_len == cars.size()) {
+                            is_ok = 1;
+                        }
+                    }
+                    if(is_ok == 1) {
+                        child_path_vec.erase(child_path_vec.begin() + m);
+                    } else {
+                        m++;
+                    }
+                }
+                list<vector<pair<ll, ll>>> new_child_path_list;
+                for(ll j = 0; j < child_path_vec.size(); j++) {
+                    new_child_path_list.push_back(child_path_vec[j]);
+                }
+                if(id != i){
+                    result_map[car_vec[i]] = new_child_path_list;
+                }
+            }
+        }
+
+        for(auto it = result_map.begin(); it != result_map.end(); it++) {
+            vector<ll> cars = it->first;
+            //list<vector<pair<ll,ll>>> path_list = it->second;
+            vector<vector<pair<ll,ll>>> path_list;
+            for(auto path : it->second) {
+                path_list.push_back(path);
+            }
+            vector<bool> is_dominate(path_list.size(),0);
+            for(ll i = 0; i < path_list.size(); i++) {
+
+                for(ll j = i + 1; j < path_list.size(); j++) {
+                    ll dominate_i_len = 0;
+                    ll dominate_j_len = 0;
+                    for(ll k = 0; k < path_list[i].size(); k++) {
+                        if(path_list[i][k].first >= path_list[j][k].first && path_list[i][k].second <= path_list[j][k].second) {
+                            dominate_i_len ++;
+                        }
+                        else if(path_list[i][k].first <= path_list[j][k].first && path_list[i][k].second >= path_list[j][k].second){
+                            dominate_j_len ++;
+                        }
+                        else{
+                        }
+                    }
+                    if(dominate_i_len == cars.size()) {
+                        is_dominate[i] = 1;
+                    }
+                    if(dominate_j_len == cars.size()) {
+                        is_dominate[j] = 1;
+                    }
+
+                }
+            }
+            list<vector<pair<ll,ll>>> new_path_list;
+            for(ll i = 0; i < path_list.size(); i++) {
+                if(!is_dominate[i]) {
+                    new_path_list.push_back(path_list[i]);
+                }
+            }
+            it->second = new_path_list;
+        }
+
+    }
+
+    // 一系列结果打印函数
+    void print_contents() override{
+        int n_objects = 0;
+        int n_convoys = 0;
+        for(auto &entry : result_map){
+            if(entry.second.empty()) continue;
+            n_objects++;
+            n_convoys += entry.second.size();
+        }
+        cout << "Total number of discovered convoys: " << n_convoys << ", object combinations: " << n_objects<<" - ";
+    }
+    void print_contents(MiningTree &theTree){
+        int n_objects = 0;
+        int n_convoys = 0;
+        for(auto &entry : result_map){
+            if(entry.second.empty()) continue;
+            n_objects++;
+            n_convoys += entry.second.size();
+            string buffer;
+            // 填充key到buffer中
+            buffer.push_back('{');
+            for(ll object_id : entry.first) buffer += to_string(object_id + 1) + ",";// 真实车辆的编号从1开始
+            buffer.pop_back();
+            buffer.push_back('}');
+            buffer += " : ";
+            // 填充value的内容到buffer中
+            buffer.push_back('[');
+            for(vector<pair<ll, ll>>& ranges : entry.second){
+                pair<ll, ll>& first_range = ranges.front();
+                string begin_text_id = to_string(first_range.first);
+                buffer += "(" + begin_text_id + ")";
+                for(ll loc_id = first_range.first;loc_id <= first_range.second;loc_id++){
+                    buffer += to_string(theTree.text[loc_id].camera) + "-";
+                }
+                buffer.pop_back();
+                buffer.push_back(',');
+            }
+            buffer.pop_back();
+            buffer.push_back(']');
+            cout<<buffer<<endl;
+        }
+        cout << "Total number of discovered convoys: " << n_convoys << ", object combinations: " << n_objects << endl;
+    }
+    void dump_contents(MiningTree &theTree, string dump_path) override{
+        ofstream ofs;
+        ofs.open(dump_path, ios::out);
+        ofs<<"Objects,Path"<<endl;
+        for(auto &entry : result_map){
+            const vector<ll> &key = entry.first;
+            list<vector<pair<ll, ll>>> &intervals = entry.second;
+            if(intervals.empty()) continue;
+            string object_str;
+            // 填充key到buffer中
+            for(ll object_id : key) object_str += to_string(object_id + 1) + " ";// 真实车辆的编号从1开始
+            object_str.pop_back();
+            // 填充value的内容到buffer中
+            for(vector<pair<ll, ll>> &ranges : intervals){
+                string buffer;
+                pair<ll, ll> &first_range = ranges.front();
+                for(ll loc_id = first_range.first;loc_id <= first_range.second;loc_id++){
+                    buffer += to_string(theTree.text[loc_id].camera) + " ";
+                }
+                buffer.pop_back();
+                ofs<<object_str<<","<<buffer<<endl;
+            }
+        }
+        ofs.close();
+    }
+
 };
 
 class ResultTwoMapImpl : public Result{
@@ -211,7 +424,7 @@ public:
         }
         cout << "Total number of discovered convoys: " << n_convoys << ", object combinations: " << n_objects << endl;
     }
-    void dump_contents(MiningTree &theTree, string dump_path){
+    void dump_contents(MiningTree &theTree, string dump_path) override{
         ofstream ofs;
         ofs.open(dump_path, ios::out);
         ofs<<"Objects,Path"<<endl;

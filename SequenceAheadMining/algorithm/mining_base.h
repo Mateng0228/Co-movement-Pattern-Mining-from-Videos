@@ -17,8 +17,27 @@ private:
     vector<int> &cars;
     MiningTree &mining_tree;
 
-    void get_clusters(int camera_idx, ll m, double eps, vector<pair<int, int>> &car2position, vector<pair<int, int>> &clusters);
-    void add_result(Result &result, vector<int> &cluster, int begin_time, int end_time, ll m);
+    struct Group{
+        set<int> cluster;
+        int begin_time, end_time;
+        Group(set<int> &cluster, int begin, int end){
+            this->cluster = cluster;
+            begin_time = begin;
+            end_time = end;
+        }
+        int life_time() const{
+            return end_time - begin_time + 1;
+        }
+        bool operator<(const Group &group2) const{
+            if(begin_time == group2.begin_time){
+                if(end_time == group2.end_time) return cluster < group2.cluster;
+                return end_time < group2.end_time;
+            }
+            return begin_time < group2.begin_time;
+        }
+    };
+    void get_clusters(int camera_idx, ll m, double eps, vector<set<int>> &clusters);
+    void add_result(Result &result, Group &candidate, ll m, ll k);
     void collect_items(map<int, vector<int>>&, map<int, vector<int>>::iterator, vector<int>&, vector<vector<int>>&);
 public:
     Base_Miner(ll length, vector<ll> &begin_ids, vector<int> &cars, MiningTree &tree) : camera_length(length), begin_ids(begin_ids), cars(cars), mining_tree(tree){
@@ -29,150 +48,76 @@ public:
 };
 
 void Base_Miner::mine(Result &result, ll m, ll k, double eps) {
-    // 待延长的候选convoys
-    vector<vector<int>> pre_convoys;
-    vector<int> begin_times;
-    // pre_convoys的倒排表
-    vector<pair<int, vector<int>>> inversion_lst;
+    vector<Group> candidates;
+    vector<set<int>> clusters_first;
+    get_clusters(0, m, eps, clusters_first);
+    for(set<int> &cluster : clusters_first) candidates.emplace_back(cluster, 0, 0);
 
-    pre_convoys.emplace_back();
-    begin_times.push_back(0);
-    vector<int> &dummy_convoy = pre_convoys.front();
-    for(int car_id = 0; car_id < car_length; car_id++){
-        dummy_convoy.push_back(car_id);
-        inversion_lst.emplace_back(car_id, vector<int>{0});
-    }
-    for(int camera_idx = 0; camera_idx < camera_length; camera_idx++){
-        vector<pair<int, int>> car2position; // 记录car_id在倒排表中的位置
-        for(int invert_id = 0; invert_id < inversion_lst.size(); invert_id++)
-            car2position.emplace_back(inversion_lst[invert_id].first, invert_id);
-        if(car2position.empty()) break;
-        // 获得聚类
-        vector<pair<int, int>> clusters;
-        get_clusters(camera_idx, m, eps, car2position, clusters);
-        // 初始化辅助数据结构
-        set<pair<vector<int>, int>> candidates; // pair(car_ids, begin_time)
-        vector<bool> extend_flags;
-        vector<int> in_checks;
-        for(int convoy_id = 0; convoy_id < pre_convoys.size(); convoy_id++){
-            extend_flags.push_back(false);
-            in_checks.push_back(-1);
-        }
-        // 延长pre_convoys到当前摄像头
-        for(int cluster_idx = 0; cluster_idx < clusters.size(); cluster_idx++){
-            pair<int, int> &cluster_bound = clusters[cluster_idx];
-            vector<vector<int>> intersections;
-            for(int convoy_id = 0; convoy_id < pre_convoys.size(); convoy_id++) intersections.emplace_back();
-            set<int> check_st;
+    for(int camera_idx = 1; camera_idx < camera_length; camera_idx++){
+        vector<set<int>> clusters;
+        get_clusters(camera_idx, m, eps, clusters);
 
-            for(int idx = cluster_bound.first; idx <= cluster_bound.second; idx++){
-                int car_id = car2position[idx].first;
-                int pre_position = car2position[idx].second;
-                vector<int> &belong_convoys = inversion_lst[pre_position].second;
-                for(int belong_convoy : belong_convoys){
-                    intersections[belong_convoy].push_back(car_id);
-                    if(intersections[belong_convoy].size() >= m && in_checks[belong_convoy] != cluster_idx){
-                        in_checks[belong_convoy] = cluster_idx;
-                        check_st.insert(belong_convoy);
-                    }
-                }
+        set<Group> next_candidates;
+        for(Group& candidate : candidates){
+            for(int cluster_idx = 0; cluster_idx < clusters.size(); cluster_idx++){
+                set<int> &cluster = clusters[cluster_idx];
+                set<int> intersection;
+                set_intersection(candidate.cluster.begin(),candidate.cluster.end(),cluster.begin(),cluster.end(),inserter(intersection,intersection.begin()));
+
+                if(intersection.size() < m) continue;
+                else next_candidates.insert(Group(intersection, candidate.begin_time, camera_idx));
             }
-            // 收集符合条件的candidate
-            bool as_convoy = true;
-            for(int check_convoy_id : check_st){
-                vector<int> &intersection = intersections[check_convoy_id];
-                candidates.insert(make_pair(vector<int>(intersection.begin(), intersection.end()), begin_times[check_convoy_id]));
-                if(intersection.size() == cluster_bound.second - cluster_bound.first + 1) as_convoy = false;
-                if(intersection.size() == pre_convoys[check_convoy_id].size()) extend_flags[check_convoy_id] = true;
-            }
-            if(as_convoy && camera_length - camera_idx >= k){
-                vector<int> crt_cluster;
-                for(int idx = cluster_bound.first; idx <= cluster_bound.second; idx++)
-                    crt_cluster.push_back(car2position[idx].first);
-                candidates.insert(make_pair(crt_cluster, camera_idx));
-            }
+            if(candidate.life_time() >= k)
+                add_result(result, candidate, m, k);
         }
-        // 将无法继续延长的pre_convoy添加到待去重的结果集中
-        for(int convoy_id = 0; convoy_id < pre_convoys.size(); convoy_id++){
-            if(camera_idx - begin_times[convoy_id] < k) continue;
-            if(result.redundant_flag)
-                add_result(result, pre_convoys[convoy_id], begin_times[convoy_id], camera_idx - 1, m);
-            else{
-                if(!extend_flags[convoy_id])
-                    add_result(result, pre_convoys[convoy_id], begin_times[convoy_id], camera_idx - 1, m);
-            }
-        }
-//        deduplicate(candidates);
-        // 更新pre_convoys
-        pre_convoys.clear();
-        begin_times.clear();
-        for(const auto &candidate : candidates){
-            pre_convoys.emplace_back(candidate.first.begin(), candidate.first.end());
-            begin_times.push_back(candidate.second);
-        }
-        // 更新invert_lst
-        inversion_lst.clear();
-        map<int, int> invert_position_map;
-        for(pair<int, int> &item : car2position){
-            int car_id = item.first;
-            invert_position_map[car_id] = inversion_lst.size();
-            inversion_lst.emplace_back(car_id, vector<int>());
-        }
-        for(int convoy_id = 0; convoy_id < pre_convoys.size(); convoy_id++){
-            vector<int> &convoy = pre_convoys[convoy_id];
-            for(int car_id : convoy){
-                inversion_lst[invert_position_map[car_id]].second.push_back(convoy_id);
-            }
-        }
-        for(auto it = inversion_lst.begin(); it != inversion_lst.end();){
-            if(it->second.empty()) it = inversion_lst.erase(it);
-            else it++;
-        }
+        for(set<int> &cluster : clusters) next_candidates.insert(Group(cluster, camera_idx, camera_idx));
+        candidates = vector<Group>(next_candidates.begin(), next_candidates.end());
     }
-    // 收集convoy到结果集
-    for(int convoy_id = 0; convoy_id < pre_convoys.size(); convoy_id++){
-        if(camera_length - begin_times[convoy_id] < k) continue;
-        add_result(result, pre_convoys[convoy_id], begin_times[convoy_id], camera_length - 1, m);
+    for(Group &candidate : candidates){
+        if(candidate.life_time() >= k){
+            add_result(result, candidate, m, k);
+        }
     }
 }
 
-void Base_Miner::get_clusters(int camera_idx, ll m, double eps, vector<pair<int, int>> &car2position, vector<pair<int, int>> &clusters){
-    position* text = mining_tree.text;
-    sort(car2position.begin(), car2position.end(), [&](const pair<int, int> &item1, const pair<int, int> &item2){
-        int car_id1 = item1.first, car_id2 = item2.first;
-        double time1 = text[begin_ids[car_id1] + camera_idx].interval_left;
-        double time2 = text[begin_ids[car_id2] + camera_idx].interval_left;
-        return time1 < time2;
-    });
+void Base_Miner::get_clusters(int camera_idx, ll m, double eps, vector<set<int>> &clusters){
+    vector<pair<double, int>> info_list;
+    vector<int> id_list;
 
-    vector<double> time_lst;
-    for(pair<int, int> &item : car2position){
-        double curr_time = text[begin_ids[item.first] + camera_idx].interval_left;
-        time_lst.push_back(curr_time);
+    position* text = mining_tree.text;
+    for(int car_idx = 0; car_idx < car_length; car_idx++){
+        ll text_idx = begin_ids[car_idx] + camera_idx;
+        double interval_left = text[text_idx].interval_left;
+        info_list.emplace_back(interval_left, car_idx);
     }
+    sort(info_list.begin(), info_list.end(), [](const auto &info1, const auto &info2){
+        return info1.first < info2.first;
+    });
+    for(pair<double, int> &p : info_list) id_list.push_back(p.second);
+
     int left_idx = 0, right_idx = 0;
-    double border = time_lst.front() + eps;
-    while(right_idx < car2position.size() - 1){
+    double border = info_list.front().first + eps;
+    while(right_idx < info_list.size() - 1){
         int next_idx = right_idx + 1;
-        double next_start = time_lst[next_idx];
+        double next_start = info_list[next_idx].first;
         if(next_start <= border) right_idx++;
         else{
-            if(right_idx - left_idx + 1 >= m) clusters.emplace_back(left_idx, right_idx);
+            if(right_idx - left_idx + 1 >= m) clusters.emplace_back(id_list.begin() + left_idx, id_list.begin() + right_idx + 1);
             while(left_idx != next_idx){
-                if(next_start - time_lst[left_idx] <= eps) break;
+                if(next_start - info_list[left_idx].first <= eps) break;
                 else left_idx++;
             }
-            border = time_lst[left_idx] + eps;
+            border = info_list[left_idx].first + eps;
             right_idx++;
         }
     }
-    if(right_idx - left_idx + 1 >= m) clusters.emplace_back(left_idx, right_idx);
+    if(right_idx - left_idx + 1 >= m) clusters.emplace_back(id_list.begin() + left_idx, id_list.begin() + right_idx + 1);
 }
 
-void Base_Miner::add_result(Result &result, vector<int> &cluster, int begin_time, int end_time, ll m) {
+void Base_Miner::add_result(Result &result, Group &candidate, ll m, ll k) {
     bool need_collect = false;
     map<int, vector<int>> car2ids;
-    for(int car_id : cluster){
+    for(int car_id : candidate.cluster){
         int car = cars[car_id];
         auto it  = car2ids.find(car);
         if(it == car2ids.end()) car2ids[car] = vector<int>{car_id};
@@ -200,9 +145,9 @@ void Base_Miner::add_result(Result &result, vector<int> &cluster, int begin_time
     for(vector<int> &car_ids : car_ids_list){
         value.emplace_back();
         vector<ll> &temp_ids = value.back();
-        for(int car_id : car_ids) temp_ids.push_back(begin_ids[car_id] + begin_time);
+        for(int car_id : car_ids) temp_ids.push_back(begin_ids[car_id] + candidate.begin_time);
     }
-    result.insert(key, value, end_time - begin_time + 1);
+    result.insert(key, value, candidate.end_time - candidate.begin_time + 1);
 }
 
 void Base_Miner::collect_items(map<int, vector<int>>& car2ids, map<int, vector<int>>::iterator it, vector<int>& car_ids, vector<vector<int>>& car_ids_list) {

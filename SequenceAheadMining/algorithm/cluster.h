@@ -81,7 +81,7 @@ void temporal_cluster(vector<car_info>& car_infos, vector<pair<int, int>>& clust
 }
 
 void add_cluster_mark(vector<position> *arr_positions, int arr_size, ll m, double eps){
-    // 按摄像头组织数据
+    // organize the data in arr_positions by camera
     map<ll, vector<car_info>> camera_map;
     for(int arr_idx = 0;arr_idx < arr_size;arr_idx++){
         vector<position>& positions = arr_positions[arr_idx];
@@ -97,7 +97,7 @@ void add_cluster_mark(vector<position> *arr_positions, int arr_size, ll m, doubl
             else it->second.emplace_back(position.interval_left, position.interval_right, arr_idx, idx);
         }
     }
-    // 逐个摄像头聚类并标号
+    // analyze each camera separately to determine which meta-cluster different vehicles belong to
     for(auto & entry : camera_map){
         ll camera = entry.first;
         vector<car_info>& car_infos = entry.second;
@@ -122,7 +122,7 @@ void add_cluster_mark(vector<position> *arr_positions, int arr_size, ll m, doubl
 
 }
 
-void split_positions(vector<position> *init_positions, int init_size, ll k, vector<vector<position>>& positions_list, vector<int>& sub2init){
+void trajectory_simplification(vector<position> *init_positions, int init_size, ll k, vector<vector<position>>& positions_list, vector<int>& sub2init){
     for(int init_idx = 0;init_idx < init_size;init_idx++){
         vector<position>& positions = init_positions[init_idx];
         int left_idx = UNCERTAIN, right_idx = UNCERTAIN;

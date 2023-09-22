@@ -35,13 +35,13 @@ public:
 };
 
 void SW_Miner::mine(Result &result, ll m, ll k, double eps) {
-    // 待延长的候选convoys
+    // the variable "pre-convoys" represents candidate patterns to be extended
     vector<vector<int>> pre_convoys;
     vector<int> begin_times;
-    // pre_convoys的倒排表
+    // the variable "inversion_lst" represents the inverted index of "pre_convoys"
     vector<pair<int, vector<int>>> inversion_lst;
 
-    // 初始化dummy convoy
+    // initialization
     pre_convoys.emplace_back();
     begin_times.push_back(0);
     vector<int> &dummy_convoy = pre_convoys.front();
@@ -49,9 +49,9 @@ void SW_Miner::mine(Result &result, ll m, ll k, double eps) {
         dummy_convoy.push_back(car_id);
         inversion_lst.emplace_back(car_id, vector<int>{0});
     }
-    // 开始逐个摄像头的延长流程
+    // process each camera in order to extend candidate patterns as much as possible
     for(int camera_idx = 0; camera_idx < camera_length; camera_idx++){
-        vector<pair<int, int>> car2position; // 记录car_id在倒排表中的位置
+        vector<pair<int, int>> car2position; // record the position of the car_id in the inverted index
         for(int inversion_id = 0; inversion_id < inversion_lst.size(); inversion_id++)
             car2position.emplace_back(inversion_lst[inversion_id].first, inversion_id);
         if(car2position.empty()) break;
@@ -59,16 +59,17 @@ void SW_Miner::mine(Result &result, ll m, ll k, double eps) {
         vector<pair<int, int>> belong_clusters;
         get_clusters(camera_idx, m, eps, car2position, belong_clusters);
 
-        deque<int> window; // 滑动窗口
+        deque<int> window; // the sliding window
         vector<Group> groups;
         for(vector<int> &pre_convoy : pre_convoys){
             groups.emplace_back();
             Group &group = groups.back();
             group.max_size = pre_convoy.size();
         }
-        set<int> check_lst; // 用于标识那些交集中元素个数大于等于m的待延长convoys
+        // used to identify the candidates for which the number of elements >= m
+        set<int> check_lst;
 
-        // 连接聚类
+        // connect candidates with clusters
         set<pair<vector<int>, int>> candidates; // pair(car_ids, begin_time)
         int handle_cluster = -1;
         for(int handle_id = 0; handle_id < belong_clusters.size(); handle_id++){
@@ -90,8 +91,7 @@ void SW_Miner::mine(Result &result, ll m, ll k, double eps) {
                 }
             }
             else{
-                // 收集符合条件的candidate
-//                bool as_convoy = true;
+                // collect candidates
                 for(int convoy_id : check_lst){
                     Group &group = groups[convoy_id];
                     if(group.contain_flag) continue;
@@ -100,14 +100,11 @@ void SW_Miner::mine(Result &result, ll m, ll k, double eps) {
                     int min_top_cluster = belong_clusters[items.front()].second;
                     if(min_top_cluster == handle_cluster){
                         candidates.insert(make_pair(vector<int>(items.begin(), items.end()), begin_times[convoy_id]));
-//                        if(items.size() == window.size()) as_convoy = false;
                         if(items.size() == group.max_size) group.extend_flag = true;
                         group.contain_flag = true;
                     }
                 }
-//                if(as_convoy && camera_length - camera_idx >= k)
-//                    candidates.insert(make_pair(vector<int>(window.begin(), window.end()), camera_idx));
-                // 删除不可能属于之后要处理的聚类的车辆
+                // remove vehicles that will not be used subsequently
                 while(!window.empty()){
                     int crt_handle_id = window.front();
                     if(belong_clusters[crt_handle_id].second != handle_cluster) break;
@@ -127,20 +124,16 @@ void SW_Miner::mine(Result &result, ll m, ll k, double eps) {
                 handle_id--;
             }
         }
-        // 收集符合条件的candidate
-//        bool as_convoy = true;
+        // collect candidates one final time
         for(int convoy_id : check_lst){
             Group &group = groups[convoy_id];
             if(group.contain_flag) continue;
 
             deque<int> &items = group.items;
             candidates.insert(make_pair(vector<int>(items.begin(), items.end()), begin_times[convoy_id]));
-//            if(items.size() == window.size()) as_convoy = false;
             if(items.size() == group.max_size) group.extend_flag = true;
         }
-//        if(as_convoy && camera_length - camera_idx >= k)
-//            candidates.insert(make_pair(vector<int>(window.begin(), window.end()), camera_idx));
-        // 添加convoy到结果集
+        // add valid patterns to the result
         for(int convoy_id = 0; convoy_id < pre_convoys.size(); convoy_id++){
             if(camera_idx - begin_times[convoy_id] < k) continue;
             if(result.redundant_flag)
@@ -150,7 +143,7 @@ void SW_Miner::mine(Result &result, ll m, ll k, double eps) {
                     add_result(result, pre_convoys[convoy_id], begin_times[convoy_id], camera_idx - 1, m);
             }
         }
-        // 更新pre_convoys和begin_times
+        // update pre_convoys and begin_times
         pre_convoys.clear();
         begin_times.clear();
         for(const auto &p : candidates){
@@ -159,7 +152,7 @@ void SW_Miner::mine(Result &result, ll m, ll k, double eps) {
             for(int handle_id : p.first) pre_convoy.push_back(car2position[handle_id].first);
             begin_times.push_back(p.second);
         }
-        // 更新inversion_lst
+        // update inversion_lst
         inversion_lst.clear();
         map<int, int> car2pos;
         for(pair<int, int> &p : car2position){
@@ -176,7 +169,7 @@ void SW_Miner::mine(Result &result, ll m, ll k, double eps) {
             else it++;
         }
     }
-    // 收集convoy到结果集
+    // add valid patterns to the result one final time
     for(int convoy_id = 0; convoy_id < pre_convoys.size(); convoy_id++){
         if(camera_length - begin_times[convoy_id] < k) continue;
         add_result(result, pre_convoys[convoy_id], begin_times[convoy_id], camera_length - 1, m);
@@ -192,7 +185,7 @@ void SW_Miner::get_clusters(int camera_idx, ll m, double eps, vector<pair<int, i
         return time1 < time2;
     });
 
-    // 获得聚类信息
+    // retrieve cluster information
     vector<pair<int, int>> clusters;
     vector<double> time_list;
     for(auto &p : car_ids){
@@ -217,7 +210,7 @@ void SW_Miner::get_clusters(int camera_idx, ll m, double eps, vector<pair<int, i
     }
     if(right_idx - left_idx + 1 >= m) clusters.emplace_back(left_idx, right_idx);
 
-    // 获得每个车辆的所属聚类信息
+    // get temporal cluster information for each vehicle
     for(auto &p : car_ids) cluster_marks.emplace_back(-1, -1);
     if(clusters.empty()) return;
 
@@ -236,7 +229,7 @@ void SW_Miner::get_clusters(int camera_idx, ll m, double eps, vector<pair<int, i
         else pre_idx = curr_idx - 1;
     }
 }
-
+double insert_time = 0.0;
 void SW_Miner::add_result(Result &result, vector<int> &cluster, int begin_time, int end_time, ll m) {
     bool need_collect = false;
     map<int, vector<int>> car2ids;
@@ -270,7 +263,9 @@ void SW_Miner::add_result(Result &result, vector<int> &cluster, int begin_time, 
         vector<ll> &temp_ids = value.back();
         for(int car_id : car_ids) temp_ids.push_back(begin_ids[car_id] + begin_time);
     }
+    clock_t insert_before = clock();
     result.insert(key, value, end_time - begin_time + 1);
+    insert_time += static_cast<double>(clock() - insert_before);
 }
 
 void SW_Miner::collect_items(map<int, vector<int>>& car2ids, map<int, vector<int>>::iterator it, vector<int>& car_ids, vector<vector<int>>& car_ids_list) {

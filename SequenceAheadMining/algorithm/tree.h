@@ -70,14 +70,14 @@ MiningTree::MiningTree(vector<vector<position>>& positions_list) : positions_lis
     }
     delete[] terminatorPos;
 
-    //基本参数初始化
+    // initialize basic parameters for suffix tree-like structure
     tree = new MiningNode[text_size * 2];
     text = new position[text_size];
     needSL = 0, last_added = 0, pos = -1, remainder = 0, active_node = 0, active_e = 0, active_len = 0;
     root = active_node = new_node(-1, -1);
-    tree[root].is_leaf = false;// 默认根节点不是叶节点
+    tree[root].is_leaf = false;// we assume that the root node is not a leaf node by default
     tree[root].depth = 0;
-    //开始逐个构建
+    // construct the tree incrementally on a per-element basis
     for(int i = 0;i < n_positions;i++){
         vector<position>& positions = positions_list[i];
         for(position& element : positions) st_extend(element);

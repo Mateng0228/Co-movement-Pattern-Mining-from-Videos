@@ -12,7 +12,7 @@
 #include "algorithm/position.h"
 
 using namespace std;
-// 获得某文件夹下所有的子文件（不递归获得子文件夹内的文件）
+// Obtain all sub-files under given folder
 void get_subfiles(string path, vector<string>& filePaths) {
     vector<string> file_names;
     DIR *pDir;
@@ -37,7 +37,7 @@ void get_subfiles(string path, vector<string>& filePaths) {
     }
 }
 
-// 将文件中的数据填充到指定数据结构中
+// Fill the data in files into the specified data structure
 void fill_data(vector<long long> *strings, vector<pair<double, double>> *intervals, vector<string> paths){
     int n_strings = paths.size();
     for(int idx = 0;idx < n_strings;idx++){
@@ -68,7 +68,7 @@ void fill_data(vector<long long> *strings, vector<pair<double, double>> *interva
     }
 }
 
-// 将文件中的数据填充到指定数据结构中
+// Fill the data in files into the specified data structure
 void fill_data(vector<position> *arr_positions, vector<string> paths){
     int arr_size = paths.size();
     for(int idx = 0; idx < arr_size; idx++){
