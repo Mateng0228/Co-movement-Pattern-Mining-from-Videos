@@ -10,11 +10,21 @@ In the paper mentioned above, we expand the meanings of co-movement patterns by 
 ## Structure
 The core of this project revolves around the TCS-tree and its related optimization code. Additionally, it includes the two baseline algorithms and the datasets mentioned in the paper. The primary structure of this project can be summarized as follows:
 
-* <span style="font-weight:bold;">Co-movement-Pattern-Mining-from-Videos</span>
-  * <span style="color: #0033CC;">SequenceAheadMining</span> (TCS-tree and related code) 
-  * CMCBaseline (CMC algorithm)
-  * AprioriBaseline (Apriori based enumerator)
-  * Datasets
+```shell
+Co-movement-Pattern-Mining-from-Videos
+   |——————SequenceAheadMining # TCS-tree and related code
+   |         └——————algorithm
+   |         └——————datasets
+   |         └——————results
+   |         └——————*.h
+   |         └——————main.cpp
+   └——————CMCBaseline # CMC algorithm
+   └——————AprioriBaseline # Apriori based enumerator
+   └——————Datasets
+             └——————singapore
+             └——————chengdu
+             └——————Carla
+```
 
 > Note that SequenceAheadMining, CMCBaseline, and AprioriBaseline are three separate subprojects that are compiled and run independently.
 
@@ -58,7 +68,7 @@ cd ../SequenceAheadMining/
 ```
 Now you can find and run the final executable file in the corresponding "build" directory according to the instructions in our "Usage" section later on.
 
-## Usage
+## Usage and Reproduction
 The three subprojects in this project have a similar command-line parameter interface. You can correctly configure and run the programs in the following format:
 ```shell
 "Executable-File" "dataset-name" "m" "k" "epsilon" [OPTIONS]
@@ -73,7 +83,10 @@ The three subprojects in this project have a similar command-line parameter inte
   - **details**: additionally output detailed pattern results to "results/output.csv"
 
 After the program runs successfully, it will output the total execution time of the algorithm and the number of pattern results found.  
-By configuring the parameters of the TCS algorithm and baseline algorithms appropriately, along with using the provided datasets, readers should be able to reproduce the experimental results in the paper.
+### Additional Notes on Reproduction
+The structure of "singapore" and "chengdu" datasets is relatively straightforward. In their uncompressed directories, each text file represents the travel path of an individual vehicle. Regarding the "Carla" dataset, we have included supplementary information about its organization and usage in the readme.txt file within the dataset folder.  
+Additionally, for precise parameter settings and comparative methods employed in the experiments presented in our paper, please consult the "Experiments" section of our original paper.  
+By configuring the command-line parameters of the TCS algorithm and baseline algorithms appropriately, along with using the provided datasets, we believe readers should be able to reproduce the experimental results in the paper.
 
 ## Examples
 Here are some specific usage examples (still using SequenceAheadMining for demonstration):
@@ -92,12 +105,12 @@ cluster: 2.22219 | build tree: 0.246959 | verification: 0.25313 | de_duplicate: 
 **2. Run the TCS algorithm on the "chengdu" dataset without using the sliding-window-based verification.**
 - **Input**:
 ```shell
-build/Project chengdu 3 5 60 no-hash
+build/Project chengdu 3 5 60 cmc
 ```
 - **Output**:
 ```shell
-parameters{dataset:chengdu, m:3, k:5, epsilon:60}, additional options[ no-hash ]:
-cluster: 1.2286 | build tree: 1.2824 | verification: 1.67254 | de_duplicate: 7.36348 | Total number of discovered convoys: 4327, object combinations: 4076 - Total elapsed time: 13.4096s
+parameters{dataset:chengdu, m:3, k:5, epsilon:60}, additional options[ cmc ]:
+cluster: 1.23426 | build tree: 1.26664 | verification: 8.81589 | de_duplicate: 0.458421 | Total number of discovered convoys: 4327, object combinations: 4076 - Total elapsed time: 13.8591s
 ```
 
 ## Contact
