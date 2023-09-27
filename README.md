@@ -66,12 +66,12 @@ unzip "dataset-name.zip" # if necessary
 cp -r "dataset-name" ../SequenceAheadMining/datasets/
 cd ../SequenceAheadMining/
 ```
-Now you can find and run the final executable file in the corresponding "build" directory according to the instructions in our "Usage" section later on.
+Now you can find and run the final executable file in the corresponding "build" directory according to the instructions in our "Usage and Reproduction" section later on.
 
 ## Usage and Reproduction
 The three subprojects in this project have a similar command-line parameter interface. You can correctly configure and run the programs in the following format:
 ```shell
-"Executable-File" "dataset-name" "m" "k" "epsilon" [OPTIONS]
+Executable-File "dataset-name" "m" "k" "epsilon" [OPTIONS]
 ```
 - Note that you must switch to the root directory of the current subproject before running the executable file (due to relative path addressing in the code). If the executable file is located in the corresponding "build" directory, it means you should run the program using the format of "build/file-name".
 - Again, please ensure that the "datasets" directory of the current subproject contains the "dataset-name" directory corresponding to your dataset.
@@ -89,9 +89,9 @@ Additionally, for precise parameter settings and comparative methods employed in
 By configuring the command-line parameters of the TCS algorithm and baseline algorithms appropriately, along with using the provided datasets, we believe readers should be able to reproduce the experimental results in the paper.
 
 ## Examples
-Here are some specific usage examples (still using SequenceAheadMining for demonstration):
+**Here are some specific usage examples (still using SequenceAheadMining for demonstration):**
 
-**1. Run the TCS algorithm on the "singapore" dataset, evaluate the detailed execution time, and write the results to "result/output.csv".**
+1. Run the TCS algorithm on the "singapore" dataset, evaluate the detailed execution time, and write the results to "result/output.csv".
 - **Input**:
 ```shell
 build/Project singapore 3 5 60 details
@@ -102,7 +102,7 @@ parameters{dataset:singapore, m:3, k:5, epsilon:60}, additional options[ details
 cluster: 2.22219 | build tree: 0.246959 | verification: 0.25313 | de_duplicate: 0.076563 | Total elapsed time: 4.09293s
 ```
 
-**2. Run the TCS algorithm on the "chengdu" dataset without using the sliding-window-based verification.**
+2. Run the TCS algorithm on the "chengdu" dataset without using the sliding-window-based verification.
 - **Input**:
 ```shell
 build/Project chengdu 3 5 60 cmc
@@ -112,6 +112,47 @@ build/Project chengdu 3 5 60 cmc
 parameters{dataset:chengdu, m:3, k:5, epsilon:60}, additional options[ cmc ]:
 cluster: 1.23426 | build tree: 1.26664 | verification: 8.81589 | de_duplicate: 0.458421 | Total number of discovered convoys: 4327, object combinations: 4076 - Total elapsed time: 13.8591s
 ```
+**The following example demonstrates the process of reproducing the "algorithm runtime w.r.t path length k" part in Section 6.2 "Scalability Analysis" of our paper:**  
+- **Preparation Phase**
+  - Compile the three sub-projects "SequenceAheadMining", "CMCBaseline" and "AprioriBaseline" according to the "Installation" section instructions to generate executable files in each sub-project's "build" directory.
+  - Place the datasets "singapore" and "chengdu" into the "datasets" directory of each sub-project.  
+
+  Now the current main project structure is as follows (with some omissions):
+  ```shell
+  Co-movement-Pattern-Mining-from-Videos
+     |——————SequenceAheadMining
+     |         └——————datasets
+     |         └——————build
+     |                  └——————Project # executable file
+     |——————CMCBaseline
+     |         └——————datasets
+     |         └——————build
+     |                  └——————cmc # executable file
+     |——————AprioriBaseline
+     |         └——————datasets
+     |         └——————build
+     |                  └——————ConvoyBaseline # executable file
+     └——————Datasets
+  ```
+- **Testing Phase**
+  - Run the "TCS-tree" algorithm in "SequenceAheadMining" sub-project using commands with the form:  
+  ```build/Project "dataset-name" 3 "k" 60```  
+  - Run the "FSM" algorithm in the "SequenceAheadMining" sub-project. The commands are similar to the previous one but includes additional OPTION settings.  
+  ```build/Project "dataset-name" 3 "k" 60 no-tcs cmc no-hash ```  
+  - Run the "CMC" algorithm in "CMCBaseline" sub-project using commands with the form:  
+  ```build/cmc "dataset-name" 3 "k" 60``` 
+  - Run the "Apriori" algorithm in "AprioriBaseline" sub-project using commands with the form:  
+  ```build/ConvoyBaseline "dataset-name" 3 "k" 60```  
+
+  Due to the typically slower runtime of "CMC" and "Apriori" algorithms, we recommend utilizing relevant script files to control program execution.
+- **Data Collection and Plotting Phase**  
+Collect the data related to the final runtime of the algorithms obtained during the "Testing Phase", then use a  visualization tool to plot relevant charts:
+
+<p align="center">
+  <img src="example.png" alt="teaser" width="75%">
+</p>
+
+**Through a similar approach, we believe the process of reproducing other experiments in the paper is clear.**
 
 ## Contact
 If you encounter any problems, please contact the code maintainer at [mt0228@zju.edu.cn](mailto:mt0228@zju.edu.cn). Please note that simply raising "Issues" in github may not always be the most effective way to get our attention.
