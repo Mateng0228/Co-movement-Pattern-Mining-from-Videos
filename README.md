@@ -118,7 +118,7 @@ cluster: 1.23426 | build tree: 1.26664 | verification: 8.81589 | de_duplicate: 0
   - Place the datasets "singapore" and "chengdu" into the "datasets" directory of each sub-project.  
 
   Now the current main project structure is as follows (with some omissions):
-  ```shell
+  ```
   Co-movement-Pattern-Mining-from-Videos
      |——————SequenceAheadMining
      |         └——————datasets
@@ -149,7 +149,7 @@ cluster: 1.23426 | build tree: 1.26664 | verification: 8.81589 | de_duplicate: 0
 Collect the data related to the final runtime of the algorithms obtained during the "Testing Phase", then use a  visualization tool to plot relevant charts:
 
 <p align="center">
-  <img src="example.png" alt="teaser" width="75%">
+  <img src="example.png" alt="teaser" width="60%">
 </p>
 
 **Through a similar approach, we believe the process of reproducing other experiments in the paper is clear.**
