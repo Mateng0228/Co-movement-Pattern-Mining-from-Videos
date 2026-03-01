@@ -13,7 +13,7 @@
 using namespace std;
 
 void test_offline(string dataset, int m, int k, double eps){
-    InputHandler handler("Datasets/" + dataset);
+    InputHandler handler("datasets/" + dataset);
     vector<pair<int, Position>> &update_items = handler.get_update_data();
     map<int, Path> &data_map = handler.get_history_map();
 
@@ -38,7 +38,7 @@ void test_offline(string dataset, int m, int k, double eps){
 }
 
 void test_property(string dataset, int m = 3, int k = 5, double eps = 60, int size = 50000){
-    InputHandler handler("Datasets/" + dataset);
+    InputHandler handler("datasets/" + dataset);
     vector<pair<int, Position>> &update_items = handler.get_update_data(size);
 
 //    Baseline baseline(m, k, eps);
